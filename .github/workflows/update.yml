@@ -1,0 +1,27 @@
+name: Update Podcast Feed
+on:
+  schedule:
+    - cron: '0 */6 * * *' # Runs every 6 hours
+  workflow_dispatch: # Allows you to run it manually
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run filter script
+        run: python filter_podcast.py
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "PodcastBot"
+          git config --global user.email "bot@github.com"
+          git add filtered_feed.xml
+          git commit -m "Updated filtered feed" || exit 0
+          git push
