@@ -16,11 +16,15 @@ def main():
     fg.description('Daily DP Show episodes without C&R or Best Of clips.')
     fg.link(href='https://github.com/vinceklug/dp-filter', rel='alternate')
     fg.language('en')
+    
+    # --- ADDED THESE LINES ---
+    # This sets the "Artist" at the Show level
+    fg.author({'name': 'Dan Patrick'})
+    fg.podcast.itunes_author('Dan Patrick')
+    # -------------------------
 
     count = 0
     for entry in feed.entries:
-        # Check if ANY of your banned words are in the title
-        # We use .lower() so it catches "Best", "best", and "BEST"
         title_lower = entry.title.lower()
         if any(word.lower() in title_lower for word in BANNED_WORDS):
             continue
@@ -31,12 +35,17 @@ def main():
         fe.description(entry.description)
         fe.published(entry.published)
         
+        # --- ADDED THIS LINE ---
+        # This ensures each individual episode is tagged with the artist
+        fe.podcast.itunes_author('Dan Patrick')
+        # -----------------------
+        
         if hasattr(entry, 'enclosures'):
             enclosure = entry.enclosures[0]
             fe.enclosure(enclosure.href, enclosure.length, enclosure.type)
         
         count += 1
-        if count >= 40: # Keeps the feed quick to load
+        if count >= 40: 
             break
 
     fg.rss_file('filtered_feed.xml')
