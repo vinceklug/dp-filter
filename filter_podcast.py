@@ -2,13 +2,14 @@ import feedparser
 from feedgen.feed import FeedGenerator
 from datetime import datetime, timedelta
 import time
+import sys
 
 URL = "https://www.omnycontent.com/d/playlist/e73c998e-6e60-432f-8610-ae210140c5b1/2c906e2b-2518-466c-a457-ae320005bafb/4818243e-950b-4fc4-8a22-ae320005bb09/podcast.rss"
 
-# Filtering keywords
 BANNED_WORDS = ["c&r", "c & r", "covino", "rich", "best of", "c&amp;r"]
 
 def main():
+    print("Starting podcast filter script...", flush=True)
     feed = feedparser.parse(URL)
     fg = FeedGenerator()
     fg.load_extension('podcast')
@@ -18,23 +19,22 @@ def main():
     fg.link(href='https://github.com/vinceklug/dp-filter', rel='alternate')
     fg.language('en')
     
-    # Global Artist/Album Artist Metadata
     fg.author({'name': 'Dan Patrick'})
     fg.podcast.itunes_author('Dan Patrick')
 
-    # Calculate the cutoff date (7 days ago)
     cutoff_date = datetime.now() - timedelta(days=7)
-
     count = 0
+
+    print(f"Checking {len(feed.entries)} entries from the original feed...", flush=True)
+
     for entry in feed.entries:
-        # 1. DATE FILTER: Check if episode is older than 7 days
-        # feedparser dates are tuples; we convert to datetime for comparison
         published_time = datetime.fromtimestamp(time.mktime(entry.published_parsed))
         
+        # Date Filter
         if published_time < cutoff_date:
             continue
 
-        # 2. CONTENT FILTER: Check Title and Description
+        # Content Filter
         search_blob = (
             entry.get('title', '') + 
             entry.get('summary', '') + 
@@ -42,31 +42,30 @@ def main():
         ).lower()
         
         if any(word in search_blob for word in BANNED_WORDS):
-            print(f"Skipping banned content: {entry.title}")
+            # THE KEY FIX: Added flush=True here
+            print(f">>> SKIPPING BANNED CONTENT: {entry.title}", flush=True)
             continue
 
-        # 3. ADD ENTRY
+        # Add Entry
         fe = fg.add_entry()
         fe.id(entry.id)
         fe.title(entry.title)
         fe.description(entry.get('description', ''))
         fe.published(entry.published)
-        
-        # Set Artist to Dan Patrick and Album Artist to zzzpodcast for sorting
         fe.podcast.itunes_author('Dan Patrick')
-        # This helps on the iPod/Surfans to keep podcasts at the bottom of the list
         fe.podcast.itunes_summary('zzzpodcast') 
         
         if hasattr(entry, 'enclosures'):
             enclosure = entry.enclosures[0]
             fe.enclosure(enclosure.href, enclosure.length, enclosure.type)
         
+        print(f"Added: {entry.title}", flush=True)
         count += 1
         if count >= 40: 
             break
 
     fg.rss_file('filtered_feed.xml')
-    print(f"Successfully updated feed with {count} episodes.")
+    print(f"--- Process Complete. Added {count} episodes to filtered_feed.xml ---", flush=True)
 
 if __name__ == "__main__":
     main()
