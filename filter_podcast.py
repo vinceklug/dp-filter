@@ -4,8 +4,14 @@ from feedgen.feed import FeedGenerator
 # Dan Patrick Show Original Feed
 URL = "https://www.omnycontent.com/d/playlist/e73c998e-6e60-432f-8610-ae210140c5b1/2c906e2b-2518-466c-a457-ae320005bafb/4818243e-950b-4fc4-8a22-ae320005bb09/podcast.rss"
 
-# Add any words here that you want to block
-BANNED_WORDS = ["C&R", "Best of"]
+# Added variations for Covino and Rich
+BANNED_WORDS = [
+    "C&R", 
+    "Best of", 
+    "Covino and Rich", 
+    "Covino & Rich", 
+    "Covino"
+]
 
 def main():
     feed = feedparser.parse(URL)
@@ -17,17 +23,17 @@ def main():
     fg.link(href='https://github.com/vinceklug/dp-filter', rel='alternate')
     fg.language('en')
     
-    # SET ARTIST METADATA
+    # Set the Artist/Author metadata to Dan Patrick
     fg.author({'name': 'Dan Patrick'})
     fg.podcast.itunes_author('Dan Patrick')
 
     count = 0
     for entry in feed.entries:
-        # Get lowercase versions of Title and Description for searching
+        # Check Title and Description (if it exists)
         title_lower = entry.title.lower()
         desc_lower = entry.description.lower() if hasattr(entry, 'description') else ""
         
-        # Check if ANY banned word is in the title OR the description
+        # Filtering logic
         is_banned = False
         for word in BANNED_WORDS:
             word_lower = word.lower()
@@ -44,7 +50,7 @@ def main():
         fe.description(entry.description)
         fe.published(entry.published)
         
-        # SET ARTIST METADATA PER EPISODE
+        # Ensure individual episodes show Dan Patrick as the artist
         fe.podcast.itunes_author('Dan Patrick')
         
         if hasattr(entry, 'enclosures'):
@@ -52,7 +58,7 @@ def main():
             fe.enclosure(enclosure.href, enclosure.length, enclosure.type)
         
         count += 1
-        if count >= 40: # Keeps the feed quick to load
+        if count >= 40: 
             break
 
     fg.rss_file('filtered_feed.xml')
