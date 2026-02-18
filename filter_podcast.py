@@ -6,10 +6,11 @@ import sys
 
 URL = "https://www.omnycontent.com/d/playlist/e73c998e-6e60-432f-8610-ae210140c5b1/2c906e2b-2518-466c-a457-ae320005bafb/4818243e-950b-4fc4-8a22-ae320005bb09/podcast.rss"
 
+# Filtering keywords
 BANNED_WORDS = ["c&r", "c & r", "covino", "rich", "best of", "c&amp;r"]
 
 def main():
-    print("Starting podcast filter script...", flush=True)
+    print("Fetching original feed...", flush=True)
     feed = feedparser.parse(URL)
     fg = FeedGenerator()
     fg.load_extension('podcast')
@@ -19,18 +20,17 @@ def main():
     fg.link(href='https://github.com/vinceklug/dp-filter', rel='alternate')
     fg.language('en')
     
-    fg.author({'name': 'Dan Patrick'})
+    # Global Metadata
     fg.podcast.itunes_author('Dan Patrick')
+    fg.podcast.itunes_category('Sports')
 
-    cutoff_date = datetime.now() - timedelta(days=7)
+    # Widened to 14 days to ensure the feed isn't empty
+    cutoff_date = datetime.now() - timedelta(days=14)
     count = 0
 
-    print(f"Checking {len(feed.entries)} entries from the original feed...", flush=True)
-
     for entry in feed.entries:
+        # Date handling
         published_time = datetime.fromtimestamp(time.mktime(entry.published_parsed))
-        
-        # Date Filter
         if published_time < cutoff_date:
             continue
 
@@ -42,8 +42,7 @@ def main():
         ).lower()
         
         if any(word in search_blob for word in BANNED_WORDS):
-            # THE KEY FIX: Added flush=True here
-            print(f">>> SKIPPING BANNED CONTENT: {entry.title}", flush=True)
+            print(f">>> SKIPPING: {entry.title}", flush=True)
             continue
 
         # Add Entry
@@ -53,19 +52,22 @@ def main():
         fe.description(entry.get('description', ''))
         fe.published(entry.published)
         fe.podcast.itunes_author('Dan Patrick')
-        fe.podcast.itunes_summary('zzzpodcast') 
         
-        if hasattr(entry, 'enclosures'):
+        # Enclosure check (Required for Apple Podcasts)
+        if hasattr(entry, 'enclosures') and len(entry.enclosures) > 0:
             enclosure = entry.enclosures[0]
             fe.enclosure(enclosure.href, enclosure.length, enclosure.type)
+            print(f"Added: {entry.title}", flush=True)
+            count += 1
         
-        print(f"Added: {entry.title}", flush=True)
-        count += 1
         if count >= 40: 
             break
 
+    if count == 0:
+        print("WARNING: No episodes found. Apple Podcasts may reject an empty feed.", flush=True)
+
     fg.rss_file('filtered_feed.xml')
-    print(f"--- Process Complete. Added {count} episodes to filtered_feed.xml ---", flush=True)
+    print(f"Done. {count} episodes in feed.", flush=True)
 
 if __name__ == "__main__":
     main()
